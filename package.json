@@ -1,8 +1,13 @@
 {
-  "name": "callHound",
-  "script":{
+  "name": "callhound",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
     "start": "node app.js"
   },
+  "author": "",
+  "license": "ISC",
   "dependencies": {
     "body-parser": "1.16.0",
     "express": "4.13.3",
@@ -14,3 +19,4 @@
     "wav": "1.0.0"
   }
 }
+
