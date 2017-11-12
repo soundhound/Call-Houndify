@@ -151,7 +151,7 @@ if (config.https) {
 app.post('/voice2', (request, response) => {
   // Get information about the incoming call, like the city associated
   // with the phone number (if Twilio can discover it)
-  const city = request.body.FromCity;
+  const city = request.body.FromCity || 'Toronto';
 
   // Use the Twilio Node.js SDK to build an XML response
   const twiml = new VoiceResponse();
