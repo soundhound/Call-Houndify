@@ -79,6 +79,10 @@ if (config.https) {
   // const app = express();
   
   app.use(bodyParser());
+
+  app.get('/', function(req, res) {
+    res.send("Hello World");
+})
   
   app.post('/sms', (req, res) => {
     const twiml = new MessagingResponse();
