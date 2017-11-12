@@ -19,7 +19,7 @@ var config = require(path.join(__dirname, configFile));
 
 //express app
 var app = express();
-var port = config.port || 8446;
+var port = env.port || config.port || 8446;
 // var publicFolder = argv.public || 'public';
 // app.use(express.static(path.join(__dirname, publicFolder)));
 
