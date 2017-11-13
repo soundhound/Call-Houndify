@@ -11,7 +11,9 @@ This application allows you to make voice and text queries to the Houndify API f
 
 ## Running Locally
 
-Make sure you have [Node.js](http://nodejs.org/) and the [Heroku Toolbelt](https://toolbelt.heroku.com/) installed.
+Make sure you have [Node.js](http://nodejs.org/) installed.
+
+Add your YOUR_CLIENT_ID and YOUR_CLIENT_KEY in config.json from your Houndify Client before running the application. 
 
 ```sh
 git clone https://github.com/newtonjain/Call-Houndify.git # or clone your own fork
