@@ -1,7 +1,7 @@
 {
   
-  "clientId": "AoLGSiqlF24_box0i4NnHg==",
-  "clientKey": "cDoYeTfI1mRW0pfwNfzP2Cb2tepdddFYblfxTo1tcGfMDOcNgl756SFM06nPJtJSMQcLUYFA7pguhz_N4oGLPQ==",
+  "clientId": "YOUR_CLIENT_ID",
+  "clientKey": "YOUR_CLIENT_KEY",
   
   "port": 3000,
 
