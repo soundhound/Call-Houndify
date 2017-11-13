@@ -156,7 +156,7 @@ app.post('/voice2', (request, response) => {
   // Use the Twilio Node.js SDK to build an XML response
   const twiml = new VoiceResponse();
   twiml.say({voice: 'alice'},
-    `Never gonna give you up ${city}.`
+    `Welcome to Call the Web powered by Houndify. How can I help you today?`
   );
   twiml.play({}, 'https://demo.twilio.com/docs/classic.mp3');
 
