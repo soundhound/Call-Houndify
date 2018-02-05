@@ -80,7 +80,6 @@ app.post('/sms', (req, res) => {
             console.log("HERE IS THE ERROR", err);
         }
     });
-
     myClientText.textSearch.query(query, requestInfo);
 });
 
@@ -96,7 +95,6 @@ app.post('/voice', (request, response) => {
         },
         `Welcome to Call the Web powered by Houndify. How can I help you today?`
     );
-
     twiml.record({
         action: 'http://4873745c.ngrok.io/file',
         timeout: 1,
@@ -110,7 +108,7 @@ app.post('/voice', (request, response) => {
 //Once the user asks his first question, TwiML will action will trigger this route. 
 app.post('/userquestion', function(req, res) {
     var reader = new wav.Reader();
-
+    var audioFile = req.body.RecordingUrl + ".wav";
     var twiml = new VoiceResponse();
     twiml.say({
             voice: 'alice'
@@ -121,7 +119,6 @@ app.post('/userquestion', function(req, res) {
     const myClientVoice = new Houndify.HoundifyClient({
         clientId: config.clientId,
         clientKey: config.clientKey,
-
         onResponse: function(response, info) {
             console.log("HERE IS THE VOICE RESPONSE", response);
             if (response.AllResults[0].CommandKind == 'NoResultCommand') {
@@ -166,8 +163,6 @@ app.post('/userquestion', function(req, res) {
     reader.on('end', function() {
         myClientVoice.voiceSearch.stop();
     });
-
-    var audioFile = req.body.RecordingUrl + ".wav";
 
     setTimeout(function() {
         request(audioFile).pipe(reader);
