@@ -19,25 +19,6 @@ var config = require(path.join(__dirname, configFile));
 //express app
 var app = express();
 var port = process.env.PORT || config.port || 8446;
-// var publicFolder = argv.public || 'public';
-// app.use(express.static(path.join(__dirname, publicFolder)));
-
-//Initialize HoundifyClient with Client ID, Client Key and callback methods.
-var myClient = new Houndify.HoundifyClient({
-    clientId: config.clientId,
-    clientKey: config.clientKey,
-    onResponse: function(response, info) {
-        console.log("HERE IS THE RESPONSE", response);
-        //get current conversation state for a user and save it somewhere
-        //you can then re-set it later, before sending another request for that user
-        var conversationState = myClient.conversation.getState();
-        myClient.conversation.setState(conversationState);
-        return response;
-    },
-    onError: function(err, info) {
-        console.log("HERE IS THE ERROR", err);
-    }
-});
 
 //REQUEST INFO JSON
 //see https://houndify.com/reference/RequestInfo
@@ -48,7 +29,6 @@ var requestInfo = {
     Longitude: -121.973968
 }
 
-
 if (config.https) {
     //ssl credentials
     var privateKey = fs.readFileSync(config.sslKeyFile);
@@ -57,25 +37,18 @@ if (config.https) {
         key: privateKey,
         cert: certificate
     };
-
     //https server
     var httpsServer = https.createServer(credentials, app);
     httpsServer.listen(port, function() {
         console.log("HTTPS server running on port", port);
         console.log("Open https://localhost:" + port, "in the browser to view the Web SDK demo");
     });
-
 } else {
-
     app.listen(port, function() {
         console.log("HTTP server running on port", port);
         console.log("Open http://localhost:" + port, "in the browser to view the Web SDK demo");
     });
-
 }
-
-
-// const app = express();
 
 app.use(bodyParser());
 
@@ -83,18 +56,17 @@ app.get('/', function(req, res) {
     res.send("Hello World");
 })
 
+//Send the query from arguments with request info object
 app.post('/sms', (req, res) => {
     const twiml = new MessagingResponse();
     var query = req.body.Body;
-    //Send the query from arguments with request info object
-
     var myClientText = new Houndify.HoundifyClient({
         clientId: config.clientId,
         clientKey: config.clientKey,
         onResponse: function(response, info) {
-            console.log("HERE IS THE RESPONSE", response);
-            //res.send(response);
+            console.log("HERE IS THE TEXT RESPONSE", response);
             twiml.message(response.AllResults[0].SpokenResponse);
+
             //get current conversation state for a user and save it somewhere
             //you can then re-set it later, before sending another request for that user
             var conversationState = myClient.conversation.getState();
@@ -110,52 +82,13 @@ app.post('/sms', (req, res) => {
     });
 
     myClientText.textSearch.query(query, requestInfo);
-
-});
-
-app.get('/search', function(req, res) {
-    var query = req.query.thebigquestion;
-    //Send the query from arguments with request info object
-
-    var myClientText = new Houndify.HoundifyClient({
-        clientId: config.clientId,
-        clientKey: config.clientKey,
-        onResponse: function(response, info) {
-            console.log("HERE IS THE RESPONSE", response);
-            res.send(response.AllResults[0].SpokenResponse);
-            //get current conversation state for a user and save it somewhere
-            //you can then re-set it later, before sending another request for that user
-            var conversationState = myClient.conversation.getState();
-            myClient.conversation.setState(conversationState);
-        },
-        onError: function(err, info) {
-            console.log("HERE IS THE ERROR", err);
-        }
-    });
-
-    myClientText.textSearch.query(query, requestInfo);
-})
-
-//When Twilio posts the voice blob to the backend.
-app.post('/voice', (request, response) => {
-    // Use the Twilio Node.js SDK to build an XML response
-    const twiml = new VoiceResponse();
-    twiml.say({
-        voice: 'alice'
-    }, 'hello world!');
-
-    // Render the response as XML in reply to the webhook request
-    response.type('text/xml');
-    response.send(twiml.toString());
 });
 
 // Create a route that will handle Twilio webhook requests, sent as an
 // HTTP POST to /voice in our application
-app.post('/voice2', (request, response) => {
+app.post('/voice', (request, response) => {
     // Get information about the incoming call, like the city associated
     // with the phone number (if Twilio can discover it)
-    const city = request.body.FromCity || 'Toronto';
-
     // Use the Twilio Node.js SDK to build an XML response
     const twiml = new VoiceResponse();
     twiml.say({
@@ -163,40 +96,65 @@ app.post('/voice2', (request, response) => {
         },
         `Welcome to Call the Web powered by Houndify. How can I help you today?`
     );
-    twiml.play({}, 'https://demo.twilio.com/docs/classic.mp3');
 
+    twiml.record({
+        action: 'http://4873745c.ngrok.io/file',
+        timeout: 1,
+    });
     // Render the response as XML in reply to the webhook request
     response.type('text/xml');
     response.send(twiml.toString());
 });
 
 
-//When user is loading a file from the local path. 
-app.get('/file', function(req, res) {
+//Once the user asks his first question, TwiML will action will trigger this route. 
+app.post('/userquestion', function(req, res) {
+    var reader = new wav.Reader();
 
-    var myClientVoice = new Houndify.HoundifyClient({
+    var twiml = new VoiceResponse();
+    twiml.say({
+            voice: 'alice'
+        },
+        `Thanks for your question. Fetching a response now.`
+    );
+
+    const myClientVoice = new Houndify.HoundifyClient({
         clientId: config.clientId,
         clientKey: config.clientKey,
+
         onResponse: function(response, info) {
             console.log("HERE IS THE VOICE RESPONSE", response);
-            res.send(response);
+            if (response.AllResults[0].CommandKind == 'NoResultCommand') {
+                twiml.say({
+                    voice: 'alice'
+                }, 'I was not able to find an answer for that. Do you have another question that I could help you with?');
+                res.type('text/xml');
+                res.send(twiml.toString());
+            } else {
+                twiml.say({
+                    voice: 'alice'
+                }, response.AllResults[0].SpokenResponseLong);
 
-            //get current conversation state for a user and save it somewhere
-            //you can then re-set it later, before sending another request for that user
-            var conversationState = myClient.conversation.getState();
-            myClient.conversation.setState(conversationState);
+                // Keep on looping on this route as long as user has questions
+                twiml.say({
+                    voice: 'alice'
+                }, 'Do you have another question that I could help you with?');
+                ''
+                twiml.record({
+                    action: 'http://4873745c.ngrok.io/userquestion'
+                });
+                res.type('text/xml');
+                res.send(twiml.toString());
+            }
         },
         onError: function(err, info) {
             console.log("HERE IS THE ERROR", err);
         }
     });
 
-
     //Read test wave and stream it to Houndify backend
-    var reader = new wav.Reader();
     reader.on('format', function(format) {
-        console.log("HERE IS THE FORMAT", format);
-        myClientVoice.voiceSearch.startStreaming(requestInfo, 16000);
+        myClientVoice.voiceSearch.startStreaming(requestInfo, 8000);
     });
 
     reader.on('data', function(chunk) {
@@ -209,10 +167,9 @@ app.get('/file', function(req, res) {
         myClientVoice.voiceSearch.stop();
     });
 
+    var audioFile = req.body.RecordingUrl + ".wav";
 
-    var audioFile = argv.audio || path.join('test_audio', 'turnthelightson.wav');
-    var audioFilePath = path.join(__dirname, audioFile)
-    var file = fs.createReadStream(audioFilePath);
-    file.pipe(reader);
-
+    setTimeout(function() {
+        request(audioFile).pipe(reader);
+    }, 500)
 })
