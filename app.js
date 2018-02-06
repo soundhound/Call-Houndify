@@ -96,7 +96,7 @@ app.post('/voice', (request, response) => {
         `Welcome to Call the Web powered by Houndify. How can I help you today?`
     );
     twiml.record({
-        action: 'http://4873745c.ngrok.io/file',
+        action: '[ADD YOUR NGROK OR CLOUD SERVICE PROVIDER URL HERE]/userquestion',
         timeout: 1,
     });
     // Render the response as XML in reply to the webhook request
@@ -138,7 +138,7 @@ app.post('/userquestion', function(req, res) {
                 }, 'Do you have another question that I could help you with?');
                 ''
                 twiml.record({
-                    action: 'http://4873745c.ngrok.io/userquestion'
+                    action: '[ADD YOUR NGROK OR CLOUD SERVICE PROVIDER URL HERE]/userquestion'
                 });
                 res.type('text/xml');
                 res.send(twiml.toString());
