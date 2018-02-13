@@ -75,6 +75,10 @@ app.post('/sms', (req, res) => {
                 'Content-Type': 'text/xml'
             });
             res.end(twiml.toString());
+            //get current conversation state for a user and save it somewhere
+            //you can then re-set it later, before sending another request for that user
+            var conversationState = myClient.conversation.getState();
+            myClient.conversation.setState(conversationState);
         },
         onError: function(err, info) {
             console.log("HERE IS THE ERROR", err);
@@ -143,6 +147,11 @@ app.post('/userquestion', function(req, res) {
                 res.type('text/xml');
                 res.send(twiml.toString());
             }
+
+            //get current conversation state for a user and save it somewhere
+            //you can then re-set it later, before sending another request for that user
+            var conversationState = myClient.conversation.getState();
+            myClient.conversation.setState(conversationState);
         },
         onError: function(err, info) {
             console.log("HERE IS THE ERROR", err);
