@@ -66,19 +66,14 @@ app.post('/sms', (req, res) => {
         onResponse: function(response, info) {
             console.log("HERE IS THE TEXT RESPONSE", response);
             twiml.message(response.AllResults[0].SpokenResponse);
-
-            //get current conversation state for a user and save it somewhere
-            //you can then re-set it later, before sending another request for that user
-            var conversationState = myClient.conversation.getState();
-            myClient.conversation.setState(conversationState);
             res.writeHead(200, {
                 'Content-Type': 'text/xml'
             });
             res.end(twiml.toString());
             //get current conversation state for a user and save it somewhere
             //you can then re-set it later, before sending another request for that user
-            var conversationState = myClient.conversation.getState();
-            myClient.conversation.setState(conversationState);
+            var conversationState = myClientText.conversation.getState();
+            myClientText.conversation.setState(conversationState);
         },
         onError: function(err, info) {
             console.log("HERE IS THE ERROR", err);
@@ -150,8 +145,8 @@ app.post('/userquestion', function(req, res) {
 
             //get current conversation state for a user and save it somewhere
             //you can then re-set it later, before sending another request for that user
-            var conversationState = myClient.conversation.getState();
-            myClient.conversation.setState(conversationState);
+            var conversationState = myClientVoice.conversation.getState();
+            myClientVoice.conversation.setState(conversationState);
         },
         onError: function(err, info) {
             console.log("HERE IS THE ERROR", err);
