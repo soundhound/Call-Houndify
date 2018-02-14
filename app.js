@@ -8,6 +8,7 @@ var https = require('https');
 var bodyParser = require('body-parser');
 const MessagingResponse = require('twilio').twiml.MessagingResponse;
 const VoiceResponse = require('twilio').twiml.VoiceResponse;
+var request = require('request');
 
 //parse arguments
 var argv = require('minimist')(process.argv.slice(2));
@@ -23,11 +24,14 @@ var port = process.env.PORT || config.port || 8446;
 //REQUEST INFO JSON
 //see https://houndify.com/reference/RequestInfo
 var requestInfo = {
-    ClientID: config.clientId,
     UserID: "test_user",
     Latitude: 37.388309,
     Longitude: -121.973968
 }
+
+// To scale the application across multiple users, create a hashmap to track conversational state for each unique user.
+// Use user's phone number as a unique key. 
+var conversationState;
 
 if (config.https) {
     //ssl credentials
@@ -56,35 +60,37 @@ app.get('/', function(req, res) {
     res.send("Hello World");
 })
 
+
 //Send the query from arguments with request info object
 app.post('/sms', (req, res) => {
     const twiml = new MessagingResponse();
     var query = req.body.Body;
-    var myClientText = new Houndify.HoundifyClient({
+    console.log('here is the REQ', req.body.From);
+
+
+    //Initialize TextRequest
+    var textRequest = new Houndify.TextRequest({
         clientId: config.clientId,
         clientKey: config.clientKey,
+        query: query,
+        requestInfo: requestInfo,
+        conversationState: conversationState,
         onResponse: function(response, info) {
             console.log("HERE IS THE TEXT RESPONSE", response);
             twiml.message(response.AllResults[0].SpokenResponse);
 
-            //get current conversation state for a user and save it somewhere
-            //you can then re-set it later, before sending another request for that user
-            var conversationState = myClient.conversation.getState();
-            myClient.conversation.setState(conversationState);
             res.writeHead(200, {
                 'Content-Type': 'text/xml'
             });
             res.end(twiml.toString());
             //get current conversation state for a user and save it somewhere
             //you can then re-set it later, before sending another request for that user
-            var conversationState = myClient.conversation.getState();
-            myClient.conversation.setState(conversationState);
+            conversationState = response.AllResults[0].ConversationState;
         },
         onError: function(err, info) {
-            console.log("HERE IS THE ERROR", err);
+            console.log(err);
         }
     });
-    myClientText.textSearch.query(query, requestInfo);
 });
 
 // Create a route that will handle Twilio webhook requests, sent as an
@@ -100,7 +106,7 @@ app.post('/voice', (request, response) => {
         `Welcome to Call the Web powered by Houndify. How can I help you today?`
     );
     twiml.record({
-        action: '[ADD YOUR NGROK OR CLOUD SERVICE PROVIDER URL HERE]/userquestion',
+        action: ' [ADD YOUR NGROK OR CLOUD SERVICE PROVIDER URL HERE]/userquestion',
         timeout: 1,
     });
     // Render the response as XML in reply to the webhook request
@@ -109,10 +115,9 @@ app.post('/voice', (request, response) => {
 });
 
 
-//Once the user asks his first question, TwiML will action will trigger this route. 
+//Once the user asks his first question, TwiML action will trigger this route. 
 app.post('/userquestion', function(req, res) {
-    var reader = new wav.Reader();
-    var audioFile = req.body.RecordingUrl + ".wav";
+
     var twiml = new VoiceResponse();
     twiml.say({
             voice: 'alice'
@@ -120,57 +125,66 @@ app.post('/userquestion', function(req, res) {
         `Thanks for your question. Fetching a response now.`
     );
 
-    const myClientVoice = new Houndify.HoundifyClient({
-        clientId: config.clientId,
-        clientKey: config.clientKey,
-        onResponse: function(response, info) {
-            console.log("HERE IS THE VOICE RESPONSE", response);
-            if (response.AllResults[0].CommandKind == 'NoResultCommand') {
-                twiml.say({
-                    voice: 'alice'
-                }, 'I was not able to find an answer for that. Do you have another question that I could help you with?');
-                res.type('text/xml');
-                res.send(twiml.toString());
-            } else {
-                twiml.say({
-                    voice: 'alice'
-                }, response.AllResults[0].SpokenResponseLong);
-
-                // Keep on looping on this route as long as user has questions
-                twiml.say({
-                    voice: 'alice'
-                }, 'Do you have another question that I could help you with?');
-                ''
-                twiml.record({
-                    action: '[ADD YOUR NGROK OR CLOUD SERVICE PROVIDER URL HERE]/userquestion'
-                });
-                res.type('text/xml');
-                res.send(twiml.toString());
-            }
-
-            //get current conversation state for a user and save it somewhere
-            //you can then re-set it later, before sending another request for that user
-            var conversationState = myClient.conversation.getState();
-            myClient.conversation.setState(conversationState);
-        },
-        onError: function(err, info) {
-            console.log("HERE IS THE ERROR", err);
-        }
-    });
+    var reader = new wav.Reader();
+    var audioFile = req.body.RecordingUrl + ".wav";
+    var myClientVoice;
 
     //Read test wave and stream it to Houndify backend
     reader.on('format', function(format) {
-        myClientVoice.voiceSearch.startStreaming(requestInfo, 8000);
+        myClientVoice = new Houndify.VoiceRequest({
+            clientId: config.clientId,
+            clientKey: config.clientKey,
+            requestInfo: requestInfo,
+            sampleRate: 8000,
+            enableVAD: true,
+            onversationState: conversationState,
+            onResponse: function(response, info) {
+                console.log("HERE IS THE VOICE RESPONSE", response);
+                if (response.AllResults[0].CommandKind == 'NoResultCommand') {
+                    twiml.say({
+                        voice: 'alice'
+                    }, 'I was not able to find an answer for that. Do you have another question that I could help you with?');
+                    res.type('text/xml');
+                    res.send(twiml.toString());
+                } else {
+                    twiml.say({
+                        voice: 'alice'
+                    }, response.AllResults[0].SpokenResponseLong);
+
+                    // Keep on looping on this route as long as user has questions
+                    twiml.say({
+                        voice: 'alice'
+                    }, 'Do you have another question that I could help you with?');
+                    twiml.record({
+                        action: ' [ADD YOUR NGROK OR CLOUD SERVICE PROVIDER URL HERE]/userquestion'
+                    });
+                    res.type('text/xml');
+                    res.send(twiml.toString());
+                }
+                //get current conversation state for a user and save it somewhere
+                //you can then re-set it later, before sending another request for that user
+                conversationState = response.AllResults[0].ConversationState;
+            },
+
+            onTranscriptionUpdate: function(trObj) {
+                console.log("Partial Transcript:", trObj.PartialTranscript);
+            },
+
+            onError: function(err, info) {
+                console.log(err);
+            }
+
+        });
     });
 
     reader.on('data', function(chunk) {
         var arrayBuffer = new Uint8Array(chunk).buffer;
         var view = new Int16Array(arrayBuffer);
-        myClientVoice.voiceSearch.write(view);
+        myClientVoice.write(view);
     });
 
     reader.on('end', function() {
-        myClientVoice.voiceSearch.stop();
+        myClientVoice.end();
     });
 
     setTimeout(function() {
