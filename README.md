@@ -1,6 +1,6 @@
 # Call Houndify
 
-This application allows you to make voice and text queries to the Houndify API from your phone. 
+This application allows you to make voice and text queries to the Houndify API from your phone. Check out this [Medium Post on integrating Houndify and Twilio](https://medium.com/houndify/accessing-houndify-through-phone-calls-and-text-messages-705c20fc9956) for more information. 
 
 
 ## Features
